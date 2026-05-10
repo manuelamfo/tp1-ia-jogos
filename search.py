@@ -187,8 +187,9 @@ def choose_move(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, D
         
         #if winner(board) != 0: #! está desconsiderando o empate
         is_terminal = terminal(board)[0]
-        if is_terminal or time_exceeded() or depth == 0:
-            winner_player = terminal(board)[1]
+        winner_player = terminal(board)[1]
+
+        if is_terminal:
             if winner_player == turn:
                 return 1500
             elif winner_player == other(turn):
@@ -196,6 +197,7 @@ def choose_move(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, D
             elif winner_player == 0:
                 return 0
             
+        elif depth == 0 or time_exceeded():
             return evaluate(board, turn)
         
         if (agent == Agent.MAX):
