@@ -1,1 +1,4 @@
 tp1-env
+__pycache__
+.vscode
+*.pyc
