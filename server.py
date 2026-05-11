@@ -11,7 +11,9 @@ CORS(app)
 ROWS, COLS = 6, 7
 
 AI_PLAYERS = {
-    "AI_Student" : search.choose_move,
+    "AI_Minimax" : search.choose_move,
+    "AI_Pruning" : search.choose_move_pruning,
+    "AI_Iterative" : search.choose_move_iterative,
     "AI_Random" : search.choose_move_randomly,
     "AI_Dummy": search.choose_move_infinity
 }

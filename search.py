@@ -219,12 +219,100 @@ def choose_move(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, D
     best_score = -math.inf
     for move in legal:
         new_board = make_move(board, move, turn)
-        score = minimax(new_board, Agent.MIN, max_depth - 1, valid_moves(new_board), config) 
+        score = minimax(new_board, Agent.MIN, max_depth - 1, valid_moves(new_board), config)
         if score > best_score:
             best_score = score
             best_move = move
 
     return best_move
+
+def choose_move_pruning(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, Dict]:
+    max_time_ms = int(config.get("max_time_ms"))
+    max_depth = int(config.get("max_depth"))
+    turn = int(turn)
+
+    print(f"AI choose_move called with max_time_ms={max_time_ms}, max_depth={max_depth}, player={turn}")
+    
+    start = time.time()
+
+    # Função auxiliar para checar tempo decorrido   
+    def time_exceeded():
+        return max_time_ms > 0 and (time.time() - start) * 1000.0 >= max_time_ms
+    
+    legal = valid_moves(board)
+
+    move = 0
+    if not legal:
+        # Sem jogadas: devolve 0 por convenção (servidor lida com isso)
+        return move
+    
+    # minimax apenas calcula a melhor jogada possível.
+    # é a função choose_move que deve guardar a melhor jogada encontrada e retornar no final, depois de avaliar todas as jogadas possíveis (dentro do limite de tempo)
+    def minimax_prune(board: List[List[int]], agent: Agent, depth: int, legal_moves: List[int], alpha: float, beta: float, config: Dict): # passando o dicionário config pra conseguir pegar 
+        
+        #if winner(board) != 0: #! está desconsiderando o empate
+        is_terminal = terminal(board)[0]
+        winner_player = terminal(board)[1]
+
+        if is_terminal:
+            if winner_player == turn:
+                return 1500
+            elif winner_player == other(turn):
+                return -1500
+            elif winner_player == 0:
+                return 0
+            
+        elif depth == 0 or time_exceeded():
+            return evaluate(board, turn)
+        
+        if (agent == Agent.MAX):
+            best_score_turn = -math.inf
+            for move in legal_moves:
+                new_board = make_move(board, move, turn) # usando turn ao invés de agent porque o make_move precisa do número do jogador (1 ou 2) e não do MAX/MIN
+                score = minimax_prune(new_board, Agent.MIN, depth - 1, valid_moves(new_board), alpha, beta, config)
+                best_score_turn = max(score, best_score_turn)
+                alpha = max(alpha, best_score_turn)
+                if beta <= alpha:
+                    break
+        else:
+            best_score_turn = math.inf
+            for move in legal_moves:
+                new_board = make_move(board, move, other(turn)) # usando other(turn) para passar o número do jogador adversário
+                score = minimax_prune(new_board, Agent.MAX, depth - 1, valid_moves(new_board), alpha, beta, config)       
+                best_score_turn = min(score, best_score_turn)
+                beta = min(beta, best_score_turn)
+                if beta <= alpha:  
+                    break
+        
+        return best_score_turn
+    
+    # loop para escolher a melhor jogada possível, usando a função minimax para avaliar cada jogada
+    best_move = None
+    best_score = -math.inf
+    for move in legal:
+        new_board = make_move(board, move, turn)
+        score = minimax_prune(new_board, Agent.MIN, max_depth - 1, valid_moves(new_board), -math.inf, math.inf, config)
+        if score > best_score:
+            best_score = score
+            best_move = move
+
+    return best_move
+
+def choose_move_iterative(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, Dict]:
+    max_time_ms = int(config.get("max_time_ms"))
+    max_depth = int(config.get("max_depth"))
+    turn = int(turn)
+
+    print(f"AI choose_move called with max_time_ms={max_time_ms}, max_depth={max_depth}, player={turn}")
+    
+    legal = valid_moves(board)
+
+    move = 0
+    if not legal:
+        return move
+    
+    move = random.choice(legal)
+    return move
 
 def choose_move_randomly(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, Dict]:
     max_time_ms = int(config.get("max_time_ms"))
