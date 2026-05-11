@@ -147,7 +147,6 @@ def evaluate(board: List[List[int]], turn: int):
             window = [board[r-i][c+i] for i in range(4)]
             total_score += score_window(window, turn)
 
-    print(f"Total score para a partida {total_score} - jogador {turn}")
     return total_score
 
 def choose_move(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, Dict]:
