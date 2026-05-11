@@ -305,14 +305,91 @@ def choose_move_iterative(board: List[List[int]], turn: int, config: Dict) -> Tu
 
     print(f"AI choose_move called with max_time_ms={max_time_ms}, max_depth={max_depth}, player={turn}")
     
-    legal = valid_moves(board)
+    start = time.time()
+
+    # Função auxiliar para checar tempo decorrido   
+    def time_exceeded():
+        return max_time_ms > 0 and (time.time() - start) * 1000.0 >= max_time_ms
+    
+    unordered_legal = valid_moves(board)
 
     move = 0
-    if not legal:
+    if not unordered_legal:
+        # Sem jogadas: devolve 0 por convenção (servidor lida com isso)
         return move
+
+    def order_moves(moves: List[int]) -> List[int]:
+        # Prioriza as colunas centrais, depois as adjacentes, e assim por diante
+        center = COLS // 2
+        return sorted(moves, key=lambda x: abs(x - center))
     
-    move = random.choice(legal)
-    return move
+    legal = order_moves(unordered_legal)
+    
+    # minimax apenas calcula a melhor jogada possível.
+    # é a função choose_move que deve guardar a melhor jogada encontrada e retornar no final, depois de avaliar todas as jogadas possíveis (dentro do limite de tempo)
+    def minimax_iterative(board: List[List[int]], agent: Agent, depth: int, legal_moves: List[int], alpha: float, beta: float, config: Dict): # passando o dicionário config pra conseguir pegar 
+        
+        #if winner(board) != 0: #! está desconsiderando o empate
+        is_terminal = terminal(board)[0]
+        winner_player = terminal(board)[1]
+
+        if is_terminal:
+            if winner_player == turn:
+                return 1500
+            elif winner_player == other(turn):
+                return -1500
+            elif winner_player == 0:
+                return 0
+            
+        elif depth == 0 or time_exceeded():
+            return evaluate(board, turn)
+        
+        if (agent == Agent.MAX):
+            best_score_turn = -math.inf
+            for move in legal_moves:
+                new_board = make_move(board, move, turn) # usando turn ao invés de agent porque o make_move precisa do número do jogador (1 ou 2) e não do MAX/MIN
+                score = minimax_iterative(new_board, Agent.MIN, depth - 1, valid_moves(new_board), alpha, beta, config)
+                best_score_turn = max(score, best_score_turn)
+                alpha = max(alpha, best_score_turn)
+                if beta <= alpha:
+                    break
+        else:
+            best_score_turn = math.inf
+            for move in legal_moves:
+                new_board = make_move(board, move, other(turn)) # usando other(turn) para passar o número do jogador adversário
+                score = minimax_iterative(new_board, Agent.MAX, depth - 1, valid_moves(new_board), alpha, beta, config)       
+                best_score_turn = min(score, best_score_turn)
+                beta = min(beta, best_score_turn)
+                if beta <= alpha:  
+                    break
+        
+        return best_score_turn
+    
+    # loop para escolher a melhor jogada possível, usando a função minimax para avaliar cada jogada
+    best_move = legal[0] # default para o caso de não conseguir avaliar nenhuma jogada dentro do limite de tempo
+    best_score = -math.inf
+    for current_depth in range(1, max_depth + 1):
+        if time_exceeded():
+            break
+
+        iteration_best_move = None
+        iteration_best_score = -math.inf
+
+        for move in legal:
+            if time_exceeded():
+                break
+
+            new_board = make_move(board, move, turn)
+            score = minimax_iterative(new_board, Agent.MIN, current_depth - 1, valid_moves(new_board), -math.inf, math.inf, config)
+            if score > iteration_best_score:
+                iteration_best_score = score
+                iteration_best_move = move
+
+        if iteration_best_move is not None: 
+            best_move = iteration_best_move
+            best_score = iteration_best_score
+
+    return best_move
 
 def choose_move_randomly(board: List[List[int]], turn: int, config: Dict) -> Tuple[int, Dict]:
     max_time_ms = int(config.get("max_time_ms"))
